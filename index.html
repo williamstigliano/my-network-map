@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Network Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+    <style>
+        html, body { height: 100%; margin: 0; font-family: Arial, sans-serif; }
+        #map { height: 100%; width: 100%; }
+
+        #legend, #searchBox, #formPanel, #exportPanel {
+            position: absolute;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            z-index: 1000;
+        }
+
+        #legend { top: 12px; left: 12px; padding: 12px; font-size: 14px; max-width: 230px; }
+        #legend h3 { margin: 0 0 8px 0; font-size: 16px; }
+        .legend-item { display: flex; align-items: center; margin: 6px 0; }
+        .legend-color { width: 16px; height: 16px; border-radius: 50%; margin-right: 8px; border: 1px solid #555; }
+
+        #searchBox { top: 12px; left: 260px; padding: 10px; width: 310px; max-height: 55%; overflow-y: auto; }
+        #searchInput { width: 100%; box-sizing: border-box; padding: 8px; font-size: 14px; }
+        #searchCount { margin-top: 6px; font-size: 12px; color: #555; }
+        .result-item { padding: 7px; border-bottom: 1px solid #ddd; cursor: pointer; font-size: 13px; }
+        .result-item:hover { background: #f0f0f0; }
+        .result-name { font-weight: bold; }
+
+        #addButton {
+            position: absolute; top: 12px; right: 12px; z-index: 1000;
+            background: #007bff; color: white; border: none; border-radius: 50%;
+            width: 48px; height: 48px; font-size: 30px; cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25); line-height: 42px;
+        }
+
+        #formPanel {
+            top: 72px; right: 12px; width: 320px; max-height: 80%;
+            overflow-y: auto; padding: 14px; display: none;
+        }
+
+        #exportPanel {
+            left: 12px; bottom: 12px; padding: 10px; width: 190px;
+        }
+
+        #formPanel h3 { margin-top: 0; }
+        input, select, textarea, button { width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 8px; font-size: 14px; }
+        textarea { height: 70px; }
+
+        .small-button { border: none; border-radius: 6px; cursor: pointer; }
+        .save-button { background: #28a745; color: white; }
+        .cancel-button { background: #999; color: white; }
+        .category-button { background: #444; color: white; }
+        .danger-button { background: #dc3545; color: white; }
+        .export-button { background: #00695c; color: white; }
+
+        .edit-button, .delete-button {
+            color: white; border: none; border-radius: 5px; padding: 6px 10px;
+            margin-top: 8px; margin-right: 5px; cursor: pointer; width: auto;
+        }
+        .edit-button { background: #007bff; }
+        .delete-button { background: #dc3545; }
+
+        .popup-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; }
+
+        .pin {
+            width: 28px; height: 28px; border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg); border: 2px solid white;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.5);
+        }
+
+        #locationStatus { font-size: 13px; color: #555; margin-bottom: 8px; }
+
+        @media (max-width: 700px) {
+            #legend { max-width: 160px; font-size: 13px; }
+            #searchBox { top: 92px; left: 12px; width: 230px; max-height: 35%; }
+            #formPanel { left: 12px; right: 12px; width: auto; }
+            #exportPanel { width: 160px; }
+        }
+    </style>
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<div id="legend">
+    <h3>Legend</h3>
+    <div id="legendItems"></div>
+</div>
+
+<div id="searchBox">
+    <input id="searchInput" placeholder="Search people..." oninput="drawPeople()">
+    <div id="searchCount"></div>
+    <div id="resultsList"></div>
+</div>
+
+<button id="addButton">+</button>
+
+<div id="formPanel">
+    <h3 id="formTitle">Add Person</h3>
+
+    <input id="nameInput" placeholder="Name">
+    <input id="companyInput" placeholder="Company">
+    <input id="addressInput" placeholder="Address / City / State">
+    <select id="categoryInput"></select>
+    <input id="phoneInput" placeholder="Phone">
+    <input id="emailInput" placeholder="Email">
+    <textarea id="notesInput" placeholder="Notes"></textarea>
+
+    <div id="locationStatus">Click on the map to choose location.</div>
+
+    <button class="small-button save-button" onclick="savePerson()">Save Person</button>
+    <button class="small-button cancel-button" onclick="closeForm()">Cancel</button>
+
+    <hr>
+
+    <h3>Add Category</h3>
+    <input id="newCategoryName" placeholder="Category name, e.g. Professional">
+    <input id="newCategoryColor" placeholder="Color, e.g. red, blue, green, purple">
+    <button class="small-button category-button" onclick="addCategory()">Add Category</button>
+
+    <hr>
+
+    <button class="small-button danger-button" onclick="clearAllData()">Clear All Saved Data</button>
+</div>
+
+<div id="exportPanel">
+    <button class="small-button export-button" onclick="exportCSV()">Export to Excel/CSV</button>
+    <button class="small-button export-button" onclick="exportJSON()">Export Backup JSON</button>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+    const defaultCategories = [
+        { name: "Family", color: "red" }
+    ];
+
+    let categories = JSON.parse(localStorage.getItem("categories")) || defaultCategories;
+    let people = JSON.parse(localStorage.getItem("people")) || [];
+
+    let selectedLat = null;
+    let selectedLng = null;
+    let temporaryMarker = null;
+    let personMarkers = [];
+    let editingIndex = null;
+
+    const map = L.map('map').setView([39.8283, -98.5795], 4);
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const addButton = document.getElementById("addButton");
+    const formPanel = document.getElementById("formPanel");
+
+    addButton.onclick = function() {
+        if (formPanel.style.display === "block") closeForm();
+        else openAddForm();
+    };
+
+    function saveToLocalStorage() {
+        localStorage.setItem("categories", JSON.stringify(categories));
+        localStorage.setItem("people", JSON.stringify(people));
+    }
+
+    function getCategory(categoryName) {
+        return categories.find(cat => cat.name === categoryName) || categories[0];
+    }
+
+    function createPinIcon(category) {
+        return L.divIcon({
+            className: "",
+            html: `<div class="pin" style="background:${category.color};"></div>`,
+            iconSize: [28, 28],
+            iconAnchor: [14, 28],
+            popupAnchor: [0, -28]
+        });
+    }
+
+    function drawLegend() {
+        const legendItems = document.getElementById("legendItems");
+        legendItems.innerHTML = "";
+
+        categories.forEach(category => {
+            legendItems.innerHTML += `
+                <div class="legend-item">
+                    <div class="legend-color" style="background:${category.color};"></div>
+                    <span>${category.name}</span>
+                </div>
+            `;
+        });
+    }
+
+    function updateCategoryDropdown() {
+        const dropdown = document.getElementById("categoryInput");
+        dropdown.innerHTML = "";
+
+        categories.forEach(category => {
+            const option = document.createElement("option");
+            option.value = category.name;
+            option.textContent = category.name;
+            dropdown.appendChild(option);
+        });
+    }
+
+    function matchesSearch(person, searchText) {
+        if (!searchText) return true;
+
+        const combinedText = `
+            ${person.name}
+            ${person.company}
+            ${person.address}
+            ${person.category}
+            ${person.phone}
+            ${person.email}
+            ${person.notes}
+        `.toLowerCase();
+
+        return combinedText.includes(searchText.toLowerCase());
+    }
+
+    function drawPeople() {
+        personMarkers.forEach(marker => map.removeLayer(marker));
+        personMarkers = [];
+
+        const searchText = document.getElementById("searchInput").value.trim();
+        const filteredPeople = people
+            .map((person, index) => ({ person, index }))
+            .filter(item => matchesSearch(item.person, searchText));
+
+        filteredPeople.forEach(item => {
+            const person = item.person;
+            const originalIndex = item.index;
+            const category = getCategory(person.category);
+
+            const marker = L.marker([person.lat, person.lng], {
+                icon: createPinIcon(category)
+            }).addTo(map);
+
+            marker.bindPopup(`
+                <div class="popup-title">${person.name}</div>
+                <b>Company:</b> ${person.company || ""}<br>
+                <b>Address:</b> ${person.address || ""}<br>
+                <b>Category:</b> ${person.category}<br>
+                <b>Phone:</b> <a href="tel:${person.phone}">${person.phone}</a><br>
+                <b>Email:</b> <a href="mailto:${person.email}">${person.email}</a><br><br>
+                <b>Notes:</b><br>
+                ${person.notes || ""}<br><br>
+
+                <button class="edit-button" onclick="editPerson(${originalIndex})">Edit</button>
+                <button class="delete-button" onclick="deletePerson(${originalIndex})">Delete</button>
+            `);
+
+            marker.personIndex = originalIndex;
+            personMarkers.push(marker);
+        });
+
+        document.getElementById("searchCount").textContent =
+            `${filteredPeople.length} of ${people.length} people shown`;
+
+        drawResultsList(filteredPeople);
+    }
+
+    function drawResultsList(filteredPeople) {
+        const resultsList = document.getElementById("resultsList");
+        resultsList.innerHTML = "";
+
+        filteredPeople.forEach(item => {
+            const person = item.person;
+            const index = item.index;
+
+            const div = document.createElement("div");
+            div.className = "result-item";
+            div.innerHTML = `
+                <div class="result-name">${person.name}</div>
+                <div>${person.company || ""}</div>
+                <div>${person.address || ""}</div>
+            `;
+
+            div.onclick = function() {
+                const marker = personMarkers.find(m => m.personIndex === index);
+                if (marker) {
+                    map.setView(marker.getLatLng(), 10);
+                    marker.openPopup();
+                }
+            };
+
+            resultsList.appendChild(div);
+        });
+    }
+
+    function openAddForm() {
+        editingIndex = null;
+
+        document.getElementById("formTitle").textContent = "Add Person";
+        document.querySelector(".save-button").textContent = "Save Person";
+
+        document.getElementById("nameInput").value = "";
+        document.getElementById("companyInput").value = "";
+        document.getElementById("addressInput").value = "";
+        document.getElementById("phoneInput").value = "";
+        document.getElementById("emailInput").value = "";
+        document.getElementById("notesInput").value = "";
+
+        selectedLat = null;
+        selectedLng = null;
+
+        document.getElementById("locationStatus").textContent =
+            "Click on the map to choose location.";
+
+        if (temporaryMarker) {
+            map.removeLayer(temporaryMarker);
+            temporaryMarker = null;
+        }
+
+        formPanel.style.display = "block";
+        addButton.innerHTML = "×";
+    }
+
+    function editPerson(index) {
+        const person = people[index];
+
+        editingIndex = index;
+
+        document.getElementById("formTitle").textContent = "Edit Person";
+        document.querySelector(".save-button").textContent = "Save Changes";
+
+        document.getElementById("nameInput").value = person.name || "";
+        document.getElementById("companyInput").value = person.company || "";
+        document.getElementById("addressInput").value = person.address || "";
+        document.getElementById("categoryInput").value = person.category || categories[0].name;
+        document.getElementById("phoneInput").value = person.phone || "";
+        document.getElementById("emailInput").value = person.email || "";
+        document.getElementById("notesInput").value = person.notes || "";
+
+        selectedLat = person.lat;
+        selectedLng = person.lng;
+
+        document.getElementById("locationStatus").textContent =
+            `Current location: ${selectedLat.toFixed(4)}, ${selectedLng.toFixed(4)}. Click map to move pin.`;
+
+        if (temporaryMarker) map.removeLayer(temporaryMarker);
+        temporaryMarker = L.marker([selectedLat, selectedLng]).addTo(map);
+
+        formPanel.style.display = "block";
+        addButton.innerHTML = "×";
+
+        map.closePopup();
+    }
+
+    function closeForm() {
+        formPanel.style.display = "none";
+        addButton.innerHTML = "+";
+
+        editingIndex = null;
+        selectedLat = null;
+        selectedLng = null;
+
+        document.getElementById("locationStatus").textContent =
+            "Click on the map to choose location.";
+
+        if (temporaryMarker) {
+            map.removeLayer(temporaryMarker);
+            temporaryMarker = null;
+        }
+    }
+
+    map.on("click", function(e) {
+        if (formPanel.style.display !== "block") return;
+
+        selectedLat = e.latlng.lat;
+        selectedLng = e.latlng.lng;
+
+        document.getElementById("locationStatus").textContent =
+            `Location selected: ${selectedLat.toFixed(4)}, ${selectedLng.toFixed(4)}`;
+
+        if (temporaryMarker) map.removeLayer(temporaryMarker);
+        temporaryMarker = L.marker([selectedLat, selectedLng]).addTo(map);
+    });
+
+    function savePerson() {
+        const name = document.getElementById("nameInput").value.trim();
+        const company = document.getElementById("companyInput").value.trim();
+        const address = document.getElementById("addressInput").value.trim();
+        const category = document.getElementById("categoryInput").value;
+        const phone = document.getElementById("phoneInput").value.trim();
+        const email = document.getElementById("emailInput").value.trim();
+        const notes = document.getElementById("notesInput").value.trim();
+
+        if (!name) {
+            alert("Please enter a name.");
+            return;
+        }
+
+        if (selectedLat === null || selectedLng === null) {
+            alert("Please click on the map to choose a location.");
+            return;
+        }
+
+        const personData = {
+            name, company, address, category, phone, email, notes,
+            lat: selectedLat,
+            lng: selectedLng
+        };
+
+        if (editingIndex === null) people.push(personData);
+        else people[editingIndex] = personData;
+
+        saveToLocalStorage();
+        closeForm();
+        drawPeople();
+    }
+
+    function deletePerson(index) {
+        const person = people[index];
+        if (!confirm(`Delete ${person.name}?`)) return;
+
+        people.splice(index, 1);
+        saveToLocalStorage();
+        drawPeople();
+    }
+
+    function addCategory() {
+        const name = document.getElementById("newCategoryName").value.trim();
+        const color = document.getElementById("newCategoryColor").value.trim();
+
+        if (!name || !color) {
+            alert("Please enter category name and color.");
+            return;
+        }
+
+        const alreadyExists = categories.some(cat => cat.name.toLowerCase() === name.toLowerCase());
+
+        if (alreadyExists) {
+            alert("That category already exists.");
+            return;
+        }
+
+        categories.push({ name, color });
+        saveToLocalStorage();
+
+        document.getElementById("newCategoryName").value = "";
+        document.getElementById("newCategoryColor").value = "";
+
+        drawLegend();
+        updateCategoryDropdown();
+    }
+
+    function clearAllData() {
+        if (!confirm("Are you sure? This will delete all saved people and categories.")) return;
+
+        localStorage.removeItem("people");
+        localStorage.removeItem("categories");
+
+        people = [];
+        categories = defaultCategories;
+
+        saveToLocalStorage();
+        drawLegend();
+        updateCategoryDropdown();
+        drawPeople();
+        closeForm();
+    }
+
+    function exportCSV() {
+        if (!confirm("Export your network data as a local CSV file? You can open it in Excel.")) return;
+
+        const headers = ["Name", "Company", "Address", "Category", "Phone", "Email", "Notes", "Latitude", "Longitude"];
+
+        const rows = people.map(p => [
+            p.name || "",
+            p.company || "",
+            p.address || "",
+            p.category || "",
+            p.phone || "",
+            p.email || "",
+            p.notes || "",
+            p.lat || "",
+            p.lng || ""
+        ]);
+
+        const csvContent = [headers, ...rows]
+            .map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(","))
+            .join("\n");
+
+        downloadFile(csvContent, "my_network_map_export.csv", "text/csv");
+    }
+
+    function exportJSON() {
+        if (!confirm("Export a full local backup JSON file? This is best for restoring the app later.")) return;
+
+        const backup = {
+            exportedAt: new Date().toISOString(),
+            categories: categories,
+            people: people
+        };
+
+        downloadFile(JSON.stringify(backup, null, 2), "my_network_map_backup.json", "application/json");
+    }
+
+    function downloadFile(content, filename, type) {
+        const blob = new Blob([content], { type: type });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    drawLegend();
+    updateCategoryDropdown();
+    drawPeople();
+</script>
+
+</body>
+</html>
