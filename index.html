@@ -3,7 +3,10 @@
 <head>
     <title>My Network Map</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
 
     <style>
         html, body { height: 100%; margin: 0; font-family: Arial, sans-serif; }
@@ -41,9 +44,7 @@
             overflow-y: auto; padding: 14px; display: none;
         }
 
-        #exportPanel {
-            left: 12px; bottom: 12px; padding: 10px; width: 190px;
-        }
+        #exportPanel { left: 12px; bottom: 12px; padding: 10px; width: 190px; }
 
         #formPanel h3 { margin-top: 0; }
         input, select, textarea, button { width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 8px; font-size: 14px; }
@@ -73,11 +74,28 @@
 
         #locationStatus { font-size: 13px; color: #555; margin-bottom: 8px; }
 
+        .help-text {
+            font-size: 12px;
+            color: #555;
+            margin-top: -4px;
+            margin-bottom: 8px;
+        }
+
         @media (max-width: 700px) {
-            #legend { max-width: 160px; font-size: 13px; }
-            #searchBox { top: 92px; left: 12px; width: 230px; max-height: 35%; }
-            #formPanel { left: 12px; right: 12px; width: auto; }
-            #exportPanel { width: 160px; }
+            #legend { max-width: 155px; font-size: 12px; padding: 9px; }
+            #searchBox { top: 90px; left: 12px; width: 225px; max-height: 32%; }
+            #exportPanel { width: 155px; padding: 8px; }
+
+            #formPanel {
+                left: 10px;
+                right: 10px;
+                bottom: 10px;
+                top: auto;
+                width: auto;
+                max-height: 58%;
+                padding: 12px;
+                border-radius: 14px;
+            }
         }
     </style>
 </head>
@@ -104,13 +122,19 @@
 
     <input id="nameInput" placeholder="Name">
     <input id="companyInput" placeholder="Company">
-    <input id="addressInput" placeholder="Address / City / State">
+
+    <input id="locationInput" placeholder="Map location, e.g. Washington DC">
+    <div class="help-text">This is sent to the geocoder to place the pin. Use city/state if you want privacy.</div>
+
+    <input id="addressInput" placeholder="Private address/details, saved locally only">
+    <div class="help-text">This is only saved in your app and shown in the popup/list.</div>
+
     <select id="categoryInput"></select>
     <input id="phoneInput" placeholder="Phone">
     <input id="emailInput" placeholder="Email">
     <textarea id="notesInput" placeholder="Notes"></textarea>
 
-    <div id="locationStatus">Click on the map to choose location.</div>
+    <div id="locationStatus">Map location will be used to place the pin.</div>
 
     <button class="small-button save-button" onclick="savePerson()">Save Person</button>
     <button class="small-button cancel-button" onclick="closeForm()">Cancel</button>
@@ -133,6 +157,7 @@
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 
 <script>
     const defaultCategories = [
@@ -144,7 +169,6 @@
 
     let selectedLat = null;
     let selectedLng = null;
-    let temporaryMarker = null;
     let personMarkers = [];
     let editingIndex = null;
 
@@ -153,6 +177,15 @@
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
+
+    const markerClusterGroup = L.markerClusterGroup({
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: true,
+        maxClusterRadius: 35
+    });
+
+    map.addLayer(markerClusterGroup);
 
     const addButton = document.getElementById("addButton");
     const formPanel = document.getElementById("formPanel");
@@ -213,6 +246,7 @@
         const combinedText = `
             ${person.name}
             ${person.company}
+            ${person.location}
             ${person.address}
             ${person.category}
             ${person.phone}
@@ -224,10 +258,11 @@
     }
 
     function drawPeople() {
-        personMarkers.forEach(marker => map.removeLayer(marker));
+        markerClusterGroup.clearLayers();
         personMarkers = [];
 
         const searchText = document.getElementById("searchInput").value.trim();
+
         const filteredPeople = people
             .map((person, index) => ({ person, index }))
             .filter(item => matchesSearch(item.person, searchText));
@@ -239,15 +274,16 @@
 
             const marker = L.marker([person.lat, person.lng], {
                 icon: createPinIcon(category)
-            }).addTo(map);
+            });
 
             marker.bindPopup(`
                 <div class="popup-title">${person.name}</div>
                 <b>Company:</b> ${person.company || ""}<br>
-                <b>Address:</b> ${person.address || ""}<br>
+                <b>Map Location:</b> ${person.location || ""}<br>
+                <b>Address/Details:</b> ${person.address || ""}<br>
                 <b>Category:</b> ${person.category}<br>
-                <b>Phone:</b> <a href="tel:${person.phone}">${person.phone}</a><br>
-                <b>Email:</b> <a href="mailto:${person.email}">${person.email}</a><br><br>
+                <b>Phone:</b> <a href="tel:${person.phone}">${person.phone || ""}</a><br>
+                <b>Email:</b> <a href="mailto:${person.email}">${person.email || ""}</a><br><br>
                 <b>Notes:</b><br>
                 ${person.notes || ""}<br><br>
 
@@ -257,6 +293,7 @@
 
             marker.personIndex = originalIndex;
             personMarkers.push(marker);
+            markerClusterGroup.addLayer(marker);
         });
 
         document.getElementById("searchCount").textContent =
@@ -278,14 +315,17 @@
             div.innerHTML = `
                 <div class="result-name">${person.name}</div>
                 <div>${person.company || ""}</div>
+                <div>${person.location || ""}</div>
                 <div>${person.address || ""}</div>
             `;
 
             div.onclick = function() {
                 const marker = personMarkers.find(m => m.personIndex === index);
                 if (marker) {
-                    map.setView(marker.getLatLng(), 10);
-                    marker.openPopup();
+                    markerClusterGroup.zoomToShowLayer(marker, function() {
+                        map.setView(marker.getLatLng(), Math.max(map.getZoom(), 10));
+                        marker.openPopup();
+                    });
                 }
             };
 
@@ -301,6 +341,7 @@
 
         document.getElementById("nameInput").value = "";
         document.getElementById("companyInput").value = "";
+        document.getElementById("locationInput").value = "";
         document.getElementById("addressInput").value = "";
         document.getElementById("phoneInput").value = "";
         document.getElementById("emailInput").value = "";
@@ -310,12 +351,7 @@
         selectedLng = null;
 
         document.getElementById("locationStatus").textContent =
-            "Click on the map to choose location.";
-
-        if (temporaryMarker) {
-            map.removeLayer(temporaryMarker);
-            temporaryMarker = null;
-        }
+            "Map location will be used to place the pin.";
 
         formPanel.style.display = "block";
         addButton.innerHTML = "×";
@@ -331,6 +367,7 @@
 
         document.getElementById("nameInput").value = person.name || "";
         document.getElementById("companyInput").value = person.company || "";
+        document.getElementById("locationInput").value = person.location || person.address || "";
         document.getElementById("addressInput").value = person.address || "";
         document.getElementById("categoryInput").value = person.category || categories[0].name;
         document.getElementById("phoneInput").value = person.phone || "";
@@ -341,10 +378,7 @@
         selectedLng = person.lng;
 
         document.getElementById("locationStatus").textContent =
-            `Current location: ${selectedLat.toFixed(4)}, ${selectedLng.toFixed(4)}. Click map to move pin.`;
-
-        if (temporaryMarker) map.removeLayer(temporaryMarker);
-        temporaryMarker = L.marker([selectedLat, selectedLng]).addTo(map);
+            `Current saved coordinates: ${selectedLat.toFixed(4)}, ${selectedLng.toFixed(4)}. Saving will re-check the map location.`;
 
         formPanel.style.display = "block";
         addButton.innerHTML = "×";
@@ -361,30 +395,33 @@
         selectedLng = null;
 
         document.getElementById("locationStatus").textContent =
-            "Click on the map to choose location.";
-
-        if (temporaryMarker) {
-            map.removeLayer(temporaryMarker);
-            temporaryMarker = null;
-        }
+            "Map location will be used to place the pin.";
     }
 
-    map.on("click", function(e) {
-        if (formPanel.style.display !== "block") return;
+    async function geocodeLocation(locationText) {
+        const url =
+            "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" +
+            encodeURIComponent(locationText);
 
-        selectedLat = e.latlng.lat;
-        selectedLng = e.latlng.lng;
+        const response = await fetch(url, {
+            headers: { "Accept": "application/json" }
+        });
 
-        document.getElementById("locationStatus").textContent =
-            `Location selected: ${selectedLat.toFixed(4)}, ${selectedLng.toFixed(4)}`;
+        const results = await response.json();
 
-        if (temporaryMarker) map.removeLayer(temporaryMarker);
-        temporaryMarker = L.marker([selectedLat, selectedLng]).addTo(map);
-    });
+        if (!results || results.length === 0) return null;
 
-    function savePerson() {
+        return {
+            lat: parseFloat(results[0].lat),
+            lng: parseFloat(results[0].lon),
+            displayName: results[0].display_name
+        };
+    }
+
+    async function savePerson() {
         const name = document.getElementById("nameInput").value.trim();
         const company = document.getElementById("companyInput").value.trim();
+        const location = document.getElementById("locationInput").value.trim();
         const address = document.getElementById("addressInput").value.trim();
         const category = document.getElementById("categoryInput").value;
         const phone = document.getElementById("phoneInput").value.trim();
@@ -396,13 +433,27 @@
             return;
         }
 
-        if (selectedLat === null || selectedLng === null) {
-            alert("Please click on the map to choose a location.");
+        if (!location) {
+            alert("Please enter a map location, such as city/state.");
             return;
         }
 
+        document.getElementById("locationStatus").textContent = "Finding map location...";
+
+        const foundLocation = await geocodeLocation(location);
+
+        if (!foundLocation) {
+            document.getElementById("locationStatus").textContent =
+                "Could not find that location. Try city + state, such as Raleigh, NC.";
+            alert("Could not find that location. Try adding more detail.");
+            return;
+        }
+
+        selectedLat = foundLocation.lat;
+        selectedLng = foundLocation.lng;
+
         const personData = {
-            name, company, address, category, phone, email, notes,
+            name, company, location, address, category, phone, email, notes,
             lat: selectedLat,
             lng: selectedLng
         };
@@ -413,6 +464,8 @@
         saveToLocalStorage();
         closeForm();
         drawPeople();
+
+        map.setView([selectedLat, selectedLng], 10);
     }
 
     function deletePerson(index) {
@@ -469,11 +522,12 @@
     function exportCSV() {
         if (!confirm("Export your network data as a local CSV file? You can open it in Excel.")) return;
 
-        const headers = ["Name", "Company", "Address", "Category", "Phone", "Email", "Notes", "Latitude", "Longitude"];
+        const headers = ["Name", "Company", "Map Location", "Address/Details", "Category", "Phone", "Email", "Notes", "Latitude", "Longitude"];
 
         const rows = people.map(p => [
             p.name || "",
             p.company || "",
+            p.location || "",
             p.address || "",
             p.category || "",
             p.phone || "",
