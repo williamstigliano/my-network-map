@@ -12,7 +12,7 @@
         html, body { height: 100%; margin: 0; font-family: Arial, sans-serif; }
         #map { height: 100%; width: 100%; }
 
-        #legend, #searchBox, #formPanel, #exportPanel {
+        #legend, #searchPanel, #formPanel, #exportPanel {
             position: absolute;
             background: white;
             border-radius: 10px;
@@ -20,57 +20,29 @@
             z-index: 1000;
         }
 
-        #legend {
+        #searchButton {
+            position: absolute;
             top: 12px;
             left: 12px;
-            padding: 12px;
-            font-size: 14px;
-            max-width: 230px;
-            cursor: pointer;
-        }
-
-        #legend h3 {
-            margin: 0 0 8px 0;
-            font-size: 16px;
-        }
-
-        #legendHint {
-            font-size: 11px;
-            color: #666;
-            margin-bottom: 5px;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin: 6px 0;
-            cursor: pointer;
-        }
-
-        .legend-color {
-            width: 16px;
-            height: 16px;
+            z-index: 1000;
+            background: white;
+            border: none;
             border-radius: 50%;
-            margin-right: 8px;
-            border: 1px solid #555;
+            width: 48px;
+            height: 48px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
         }
 
-        .legend-checkbox {
-            width: auto;
-            margin: 0 7px 0 0;
-        }
-
-        #legend.collapsed .legend-controls {
-            display: none;
-        }
-
-        #searchBox {
-            top: 12px;
-            left: 260px;
+        #searchPanel {
+            top: 72px;
+            left: 12px;
             padding: 10px;
             width: 310px;
             max-height: 55%;
             overflow-y: auto;
+            display: none;
         }
 
         #searchInput {
@@ -95,6 +67,40 @@
 
         .result-item:hover { background: #f0f0f0; }
         .result-name { font-weight: bold; }
+
+        #legend {
+            right: 12px;
+            bottom: 12px;
+            padding: 12px;
+            font-size: 14px;
+            width: 220px;
+            max-height: 35%;
+            overflow-y: auto;
+        }
+
+        #legend h3 {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 6px 0;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 1px solid #555;
+        }
+
+        .legend-checkbox {
+            width: auto;
+            margin: 0 7px 0 0;
+        }
 
         #addButton {
             position: absolute;
@@ -201,28 +207,26 @@
         }
 
         @media (max-width: 700px) {
+            #searchPanel {
+                top: 70px;
+                left: 12px;
+                right: 12px;
+                width: auto;
+                max-height: 38%;
+            }
+
             #legend {
-                max-width: 155px;
+                right: 10px;
+                bottom: 10px;
+                width: 165px;
+                max-height: 28%;
                 font-size: 12px;
                 padding: 9px;
-                top: 12px;
-                left: 12px;
-            }
-
-            #legend.expanded {
-                max-width: 260px;
-                width: 235px;
-            }
-
-            #searchBox {
-                top: 12px;
-                left: 50%;
-                transform: translateX(-50%);
-                width: 210px;
-                max-height: 32%;
             }
 
             #exportPanel {
+                left: 12px;
+                bottom: 12px;
                 width: 155px;
                 padding: 8px;
             }
@@ -245,13 +249,9 @@
 
 <div id="map"></div>
 
-<div id="legend" class="collapsed" onclick="toggleLegend(event)">
-    <h3>Legend</h3>
-    <div id="legendHint">Tap to expand/filter</div>
-    <div id="legendItems"></div>
-</div>
+<button id="searchButton" onclick="toggleSearch()">🔍</button>
 
-<div id="searchBox">
+<div id="searchPanel">
     <input id="searchInput" placeholder="Search people..." oninput="drawPeople()">
     <div id="searchCount"></div>
     <div id="resultsList"></div>
@@ -293,6 +293,11 @@
     <button class="small-button danger-button" onclick="clearAllData()">Clear All Saved Data</button>
 </div>
 
+<div id="legend">
+    <h3>Legend</h3>
+    <div id="legendItems"></div>
+</div>
+
 <div id="exportPanel">
     <button class="small-button export-button" onclick="exportCSV()">Export to Excel/CSV</button>
     <button class="small-button export-button" onclick="exportJSON()">Export Backup JSON</button>
@@ -308,8 +313,8 @@
 
     let categories = JSON.parse(localStorage.getItem("categories")) || defaultCategories;
     let people = JSON.parse(localStorage.getItem("people")) || [];
-
     let visibleCategories = JSON.parse(localStorage.getItem("visibleCategories")) || {};
+
     let selectedLat = null;
     let selectedLng = null;
     let personMarkers = [];
@@ -332,13 +337,23 @@
 
     const addButton = document.getElementById("addButton");
     const formPanel = document.getElementById("formPanel");
-    const searchBox = document.getElementById("searchBox");
+    const searchButton = document.getElementById("searchButton");
+    const searchPanel = document.getElementById("searchPanel");
     const exportPanel = document.getElementById("exportPanel");
 
     addButton.onclick = function() {
         if (formPanel.style.display === "block") closeForm();
         else openAddForm();
     };
+
+    function toggleSearch() {
+        searchPanel.style.display =
+            searchPanel.style.display === "block" ? "none" : "block";
+
+        if (searchPanel.style.display === "block") {
+            document.getElementById("searchInput").focus();
+        }
+    }
 
     function saveToLocalStorage() {
         localStorage.setItem("categories", JSON.stringify(categories));
@@ -368,23 +383,6 @@
         });
     }
 
-    function toggleLegend(event) {
-        const legend = document.getElementById("legend");
-
-        if (event.target.classList.contains("legend-checkbox")) {
-            event.stopPropagation();
-            return;
-        }
-
-        legend.classList.toggle("collapsed");
-        legend.classList.toggle("expanded");
-
-        const hint = document.getElementById("legendHint");
-        hint.textContent = legend.classList.contains("collapsed")
-            ? "Tap to expand/filter"
-            : "Tap category boxes to show/hide";
-    }
-
     function drawLegend() {
         ensureVisibleCategories();
 
@@ -395,13 +393,12 @@
             const checked = visibleCategories[category.name] ? "checked" : "";
 
             legendItems.innerHTML += `
-                <div class="legend-item legend-controls">
+                <div class="legend-item">
                     <input
                         class="legend-checkbox"
                         type="checkbox"
                         ${checked}
                         onchange="toggleCategoryVisibility('${category.name}', this.checked)"
-                        onclick="event.stopPropagation();"
                     >
                     <div class="legend-color" style="background:${category.color};"></div>
                     <span>${category.name}</span>
@@ -517,6 +514,7 @@
                         map.setView(marker.getLatLng(), Math.max(map.getZoom(), 10));
                         marker.openPopup();
                     });
+                    searchPanel.style.display = "none";
                 }
             };
 
@@ -525,12 +523,14 @@
     }
 
     function hidePanelsForForm() {
-        searchBox.classList.add("hidden-while-form-open");
+        searchButton.classList.add("hidden-while-form-open");
+        searchPanel.classList.add("hidden-while-form-open");
         exportPanel.classList.add("hidden-while-form-open");
     }
 
     function showPanelsAfterForm() {
-        searchBox.classList.remove("hidden-while-form-open");
+        searchButton.classList.remove("hidden-while-form-open");
+        searchPanel.classList.remove("hidden-while-form-open");
         exportPanel.classList.remove("hidden-while-form-open");
     }
 
