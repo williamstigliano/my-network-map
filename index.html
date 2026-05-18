@@ -20,37 +20,134 @@
             z-index: 1000;
         }
 
-        #legend { top: 12px; left: 12px; padding: 12px; font-size: 14px; max-width: 230px; }
-        #legend h3 { margin: 0 0 8px 0; font-size: 16px; }
-        .legend-item { display: flex; align-items: center; margin: 6px 0; }
-        .legend-color { width: 16px; height: 16px; border-radius: 50%; margin-right: 8px; border: 1px solid #555; }
+        #legend {
+            top: 12px;
+            left: 12px;
+            padding: 12px;
+            font-size: 14px;
+            max-width: 230px;
+            cursor: pointer;
+        }
 
-        #searchBox { top: 12px; left: 260px; padding: 10px; width: 310px; max-height: 55%; overflow-y: auto; }
-        #searchInput { width: 100%; box-sizing: border-box; padding: 8px; font-size: 14px; }
-        #searchCount { margin-top: 6px; font-size: 12px; color: #555; }
-        .result-item { padding: 7px; border-bottom: 1px solid #ddd; cursor: pointer; font-size: 13px; }
+        #legend h3 {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+        }
+
+        #legendHint {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 6px 0;
+            cursor: pointer;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 1px solid #555;
+        }
+
+        .legend-checkbox {
+            width: auto;
+            margin: 0 7px 0 0;
+        }
+
+        #legend.collapsed .legend-controls {
+            display: none;
+        }
+
+        #searchBox {
+            top: 12px;
+            left: 260px;
+            padding: 10px;
+            width: 310px;
+            max-height: 55%;
+            overflow-y: auto;
+        }
+
+        #searchInput {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px;
+            font-size: 14px;
+        }
+
+        #searchCount {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #555;
+        }
+
+        .result-item {
+            padding: 7px;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
         .result-item:hover { background: #f0f0f0; }
         .result-name { font-weight: bold; }
 
         #addButton {
-            position: absolute; top: 12px; right: 12px; z-index: 1000;
-            background: #007bff; color: white; border: none; border-radius: 50%;
-            width: 48px; height: 48px; font-size: 30px; cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.25); line-height: 42px;
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 1000;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            font-size: 30px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            line-height: 42px;
         }
 
         #formPanel {
-            top: 72px; right: 12px; width: 320px; max-height: 80%;
-            overflow-y: auto; padding: 14px; display: none;
+            top: 72px;
+            right: 12px;
+            width: 320px;
+            max-height: 80%;
+            overflow-y: auto;
+            padding: 14px;
+            display: none;
         }
 
-        #exportPanel { left: 12px; bottom: 12px; padding: 10px; width: 190px; }
+        #exportPanel {
+            left: 12px;
+            bottom: 12px;
+            padding: 10px;
+            width: 190px;
+        }
 
         #formPanel h3 { margin-top: 0; }
-        input, select, textarea, button { width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 8px; font-size: 14px; }
+
+        input, select, textarea, button {
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 8px;
+            padding: 8px;
+            font-size: 14px;
+        }
+
         textarea { height: 70px; }
 
-        .small-button { border: none; border-radius: 6px; cursor: pointer; }
+        .small-button {
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
         .save-button { background: #28a745; color: white; }
         .cancel-button { background: #999; color: white; }
         .category-button { background: #444; color: white; }
@@ -58,21 +155,39 @@
         .export-button { background: #00695c; color: white; }
 
         .edit-button, .delete-button {
-            color: white; border: none; border-radius: 5px; padding: 6px 10px;
-            margin-top: 8px; margin-right: 5px; cursor: pointer; width: auto;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 6px 10px;
+            margin-top: 8px;
+            margin-right: 5px;
+            cursor: pointer;
+            width: auto;
         }
+
         .edit-button { background: #007bff; }
         .delete-button { background: #dc3545; }
 
-        .popup-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; }
+        .popup-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
 
         .pin {
-            width: 28px; height: 28px; border-radius: 50% 50% 50% 0;
-            transform: rotate(-45deg); border: 2px solid white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 2px solid white;
             box-shadow: 0 1px 5px rgba(0,0,0,0.5);
         }
 
-        #locationStatus { font-size: 13px; color: #555; margin-bottom: 8px; }
+        #locationStatus {
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 8px;
+        }
 
         .help-text {
             font-size: 12px;
@@ -81,10 +196,36 @@
             margin-bottom: 8px;
         }
 
+        .hidden-while-form-open {
+            display: none !important;
+        }
+
         @media (max-width: 700px) {
-            #legend { max-width: 155px; font-size: 12px; padding: 9px; }
-            #searchBox { top: 90px; left: 12px; width: 225px; max-height: 32%; }
-            #exportPanel { width: 155px; padding: 8px; }
+            #legend {
+                max-width: 155px;
+                font-size: 12px;
+                padding: 9px;
+                top: 12px;
+                left: 12px;
+            }
+
+            #legend.expanded {
+                max-width: 260px;
+                width: 235px;
+            }
+
+            #searchBox {
+                top: 12px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 210px;
+                max-height: 32%;
+            }
+
+            #exportPanel {
+                width: 155px;
+                padding: 8px;
+            }
 
             #formPanel {
                 left: 10px;
@@ -104,8 +245,9 @@
 
 <div id="map"></div>
 
-<div id="legend">
+<div id="legend" class="collapsed" onclick="toggleLegend(event)">
     <h3>Legend</h3>
+    <div id="legendHint">Tap to expand/filter</div>
     <div id="legendItems"></div>
 </div>
 
@@ -167,6 +309,7 @@
     let categories = JSON.parse(localStorage.getItem("categories")) || defaultCategories;
     let people = JSON.parse(localStorage.getItem("people")) || [];
 
+    let visibleCategories = JSON.parse(localStorage.getItem("visibleCategories")) || {};
     let selectedLat = null;
     let selectedLng = null;
     let personMarkers = [];
@@ -189,6 +332,8 @@
 
     const addButton = document.getElementById("addButton");
     const formPanel = document.getElementById("formPanel");
+    const searchBox = document.getElementById("searchBox");
+    const exportPanel = document.getElementById("exportPanel");
 
     addButton.onclick = function() {
         if (formPanel.style.display === "block") closeForm();
@@ -198,6 +343,15 @@
     function saveToLocalStorage() {
         localStorage.setItem("categories", JSON.stringify(categories));
         localStorage.setItem("people", JSON.stringify(people));
+        localStorage.setItem("visibleCategories", JSON.stringify(visibleCategories));
+    }
+
+    function ensureVisibleCategories() {
+        categories.forEach(category => {
+            if (visibleCategories[category.name] === undefined) {
+                visibleCategories[category.name] = true;
+            }
+        });
     }
 
     function getCategory(categoryName) {
@@ -214,18 +368,54 @@
         });
     }
 
+    function toggleLegend(event) {
+        const legend = document.getElementById("legend");
+
+        if (event.target.classList.contains("legend-checkbox")) {
+            event.stopPropagation();
+            return;
+        }
+
+        legend.classList.toggle("collapsed");
+        legend.classList.toggle("expanded");
+
+        const hint = document.getElementById("legendHint");
+        hint.textContent = legend.classList.contains("collapsed")
+            ? "Tap to expand/filter"
+            : "Tap category boxes to show/hide";
+    }
+
     function drawLegend() {
+        ensureVisibleCategories();
+
         const legendItems = document.getElementById("legendItems");
         legendItems.innerHTML = "";
 
         categories.forEach(category => {
+            const checked = visibleCategories[category.name] ? "checked" : "";
+
             legendItems.innerHTML += `
-                <div class="legend-item">
+                <div class="legend-item legend-controls">
+                    <input
+                        class="legend-checkbox"
+                        type="checkbox"
+                        ${checked}
+                        onchange="toggleCategoryVisibility('${category.name}', this.checked)"
+                        onclick="event.stopPropagation();"
+                    >
                     <div class="legend-color" style="background:${category.color};"></div>
                     <span>${category.name}</span>
                 </div>
             `;
         });
+
+        saveToLocalStorage();
+    }
+
+    function toggleCategoryVisibility(categoryName, isVisible) {
+        visibleCategories[categoryName] = isVisible;
+        saveToLocalStorage();
+        drawPeople();
     }
 
     function updateCategoryDropdown() {
@@ -265,6 +455,7 @@
 
         const filteredPeople = people
             .map((person, index) => ({ person, index }))
+            .filter(item => visibleCategories[item.person.category] !== false)
             .filter(item => matchesSearch(item.person, searchText));
 
         filteredPeople.forEach(item => {
@@ -333,6 +524,16 @@
         });
     }
 
+    function hidePanelsForForm() {
+        searchBox.classList.add("hidden-while-form-open");
+        exportPanel.classList.add("hidden-while-form-open");
+    }
+
+    function showPanelsAfterForm() {
+        searchBox.classList.remove("hidden-while-form-open");
+        exportPanel.classList.remove("hidden-while-form-open");
+    }
+
     function openAddForm() {
         editingIndex = null;
 
@@ -355,6 +556,7 @@
 
         formPanel.style.display = "block";
         addButton.innerHTML = "×";
+        hidePanelsForForm();
     }
 
     function editPerson(index) {
@@ -382,6 +584,7 @@
 
         formPanel.style.display = "block";
         addButton.innerHTML = "×";
+        hidePanelsForForm();
 
         map.closePopup();
     }
@@ -389,6 +592,7 @@
     function closeForm() {
         formPanel.style.display = "none";
         addButton.innerHTML = "+";
+        showPanelsAfterForm();
 
         editingIndex = null;
         selectedLat = null;
@@ -494,6 +698,8 @@
         }
 
         categories.push({ name, color });
+        visibleCategories[name] = true;
+
         saveToLocalStorage();
 
         document.getElementById("newCategoryName").value = "";
@@ -501,6 +707,7 @@
 
         drawLegend();
         updateCategoryDropdown();
+        drawPeople();
     }
 
     function clearAllData() {
@@ -508,11 +715,15 @@
 
         localStorage.removeItem("people");
         localStorage.removeItem("categories");
+        localStorage.removeItem("visibleCategories");
 
         people = [];
         categories = defaultCategories;
+        visibleCategories = {};
 
+        ensureVisibleCategories();
         saveToLocalStorage();
+
         drawLegend();
         updateCategoryDropdown();
         drawPeople();
@@ -550,6 +761,7 @@
         const backup = {
             exportedAt: new Date().toISOString(),
             categories: categories,
+            visibleCategories: visibleCategories,
             people: people
         };
 
@@ -570,6 +782,7 @@
         URL.revokeObjectURL(url);
     }
 
+    ensureVisibleCategories();
     drawLegend();
     updateCategoryDropdown();
     drawPeople();
